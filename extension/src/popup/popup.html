@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Локальный мост DeepSeek</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="card">
+      <div class="title">Локальный мост DeepSeek</div>
+      <label class="field">
+        <span class="label">Адрес</span>
+        <input id="hostInput" type="text" value="127.0.0.1" />
+      </label>
+      <label class="field">
+        <span class="label">Порт</span>
+        <input id="portInput" type="number" min="1" max="65535" value="8765" />
+      </label>
+      <button id="toggleBtn" class="toggle-btn connect">Соединить</button>
+      <button id="selectorsToggleBtn" class="collapse-btn">Показать настройки селекторов</button>
+      <div id="selectorsSection" class="collapsed">
+        <div class="section-title">Селекторы DeepSeek</div>
+        <label class="field">
+          <span class="label">Поле ввода</span>
+          <input id="inputSelectorInput" type="text" placeholder="Напр.: textarea[placeholder*='DeepSeek']" />
+        </label>
+        <label class="field">
+          <span class="label">Кнопка отправки</span>
+          <input id="sendButtonSelectorInput" type="text" placeholder="Напр.: div[role='button'][aria-disabled='false']" />
+        </label>
+        <label class="field">
+          <span class="label">Блок ответа</span>
+          <input id="messageBlockSelectorInput" type="text" placeholder="Напр.: .ds-markdown" />
+        </label>
+        <label class="field">
+          <span class="label">Цитаты/источники</span>
+          <input id="sourceCiteSelectorInput" type="text" placeholder="Напр.: .ds-markdown-cite" />
+        </label>
+        <div class="help-box">
+          <div class="help-title">Что вставлять в поля</div>
+          <div>Вставляй CSS-селектор элемента, а не весь HTML.</div>
+          <div>Как получить:</div>
+          <div>1) DevTools -> Elements -> выбери элемент.</div>
+          <div>2) Copy -> Copy selector и вставь сюда.</div>
+          <div>Если есть только outerHTML, найди по нему стабильный class/атрибут и сделай селектор.</div>
+        </div>
+        <div class="row-btns">
+          <button id="testSelectorsBtn" class="small-btn">Проверить</button>
+          <button id="saveSelectorsBtn" class="small-btn">Сохранить</button>
+          <button id="resetSelectorsBtn" class="small-btn">Сбросить</button>
+        </div>
+      </div>
+      <div id="selectorTestText" class="hint-text"></div>
+      <div id="errorText" class="error-text"></div>
+    </main>
+    <script type="module" src="./popup.js"></script>
+  </body>
+  </html>
