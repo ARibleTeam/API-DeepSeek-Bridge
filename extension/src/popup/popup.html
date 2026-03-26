@@ -8,34 +8,41 @@
   </head>
   <body>
     <main class="card">
-      <div class="title">Локальный мост DeepSeek</div>
-      <label class="field">
-        <span class="label">Адрес</span>
-        <input id="hostInput" type="text" value="127.0.0.1" />
-      </label>
-      <label class="field">
-        <span class="label">Порт</span>
-        <input id="portInput" type="number" min="1" max="65535" value="8765" />
-      </label>
+      <header class="header">
+        <div class="title">Локальный мост DeepSeek</div>
+        <div class="subtitle">Быстрое подключение Python ↔ DeepSeek</div>
+      </header>
+
+      <section class="section">
+        <label class="field">
+          <span class="label">Адрес</span>
+          <input id="hostInput" type="text" value="127.0.0.1" />
+        </label>
+        <label class="field">
+          <span class="label">Порт</span>
+          <input id="portInput" type="number" min="1" max="65535" value="8765" />
+        </label>
+      </section>
+
       <button id="toggleBtn" class="toggle-btn connect">Соединить</button>
       <button id="selectorsToggleBtn" class="collapse-btn">Показать настройки селекторов</button>
-      <div id="selectorsSection" class="collapsed">
+      <section id="selectorsSection" class="section collapsed">
         <div class="section-title">Селекторы DeepSeek</div>
         <label class="field">
           <span class="label">Поле ввода</span>
-          <input id="inputSelectorInput" type="text" placeholder="Напр.: textarea[placeholder*='DeepSeek']" />
+          <input id="inputSelectorInput" type="text" placeholder="textarea[placeholder*='DeepSeek']" />
         </label>
         <label class="field">
           <span class="label">Кнопка отправки</span>
-          <input id="sendButtonSelectorInput" type="text" placeholder="Напр.: div[role='button'][aria-disabled='false']" />
+          <input id="sendButtonSelectorInput" type="text" placeholder="div[role='button'][aria-disabled='false']" />
         </label>
         <label class="field">
           <span class="label">Блок ответа</span>
-          <input id="messageBlockSelectorInput" type="text" placeholder="Напр.: .ds-markdown" />
+          <input id="messageBlockSelectorInput" type="text" placeholder=".ds-markdown" />
         </label>
         <label class="field">
           <span class="label">Цитаты/источники</span>
-          <input id="sourceCiteSelectorInput" type="text" placeholder="Напр.: .ds-markdown-cite" />
+          <input id="sourceCiteSelectorInput" type="text" placeholder=".ds-markdown-cite" />
         </label>
         <div class="help-box">
           <div class="help-title">Что вставлять в поля</div>
@@ -50,7 +57,7 @@
           <button id="saveSelectorsBtn" class="small-btn">Сохранить</button>
           <button id="resetSelectorsBtn" class="small-btn">Сбросить</button>
         </div>
-      </div>
+      </section>
       <div id="selectorTestText" class="hint-text"></div>
       <div id="errorText" class="error-text"></div>
     </main>
