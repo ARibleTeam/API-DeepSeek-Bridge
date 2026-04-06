@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#8a1a1e",
+                        "outline": "#767575",
+                        "on-tertiary-container": "#00337b",
+                        "inverse-primary": "#006976",
+                        "secondary-container": "#2b007a",
+                        "tertiary-dim": "#0f6df3",
+                        "on-secondary-container": "#ac93ff",
+                        "inverse-on-surface": "#565555",
+                        "surface-variant": "#262626",
+                        "tertiary": "#b0c6ff",
+                        "surface-dim": "#0e0e0e",
+                        "secondary-fixed": "#e8deff",
+                        "surface-container-highest": "#262626",
+                        "primary": "#81ecff",
+                        "primary-container": "#00e3fd",
+                        "primary-fixed-dim": "#00d4ec",
+                        "on-secondary-fixed-variant": "#652fe7",
+                        "surface-container-low": "#131313",
+                        "tertiary-fixed-dim": "#85a9ff",
+                        "on-surface": "#e7e5e4",
+                        "on-error-container": "#ff9993",
+                        "tertiary-fixed": "#9bb8ff",
+                        "on-secondary-fixed": "#4700bd",
+                        "on-primary-fixed": "#003840",
+                        "secondary": "#cdbdff",
+                        "on-error": "#490006",
+                        "on-primary-fixed-variant": "#005762",
+                        "outline-variant": "#484848",
+                        "on-secondary": "#4800bf",
+                        "background": "#0e0e0e",
+                        "on-primary-container": "#004d57",
+                        "on-tertiary-fixed-variant": "#003b8c",
+                        "surface": "#0e0e0e",
+                        "surface-container-lowest": "#000000",
+                        "error-dim": "#c94947",
+                        "on-primary": "#005762",
+                        "surface-bright": "#2c2c2c",
+                        "on-tertiary": "#003c8e",
+                        "secondary-fixed-dim": "#dacdff",
+                        "primary-fixed": "#00e3fd",
+                        "error": "#ff716c",
+                        "tertiary-container": "#9bb8ff",
+                        "on-surface-variant": "#acabaa",
+                        "primary-dim": "#00d4ec",
+                        "surface-container": "#191a1a",
+                        "on-background": "#e7e5e4",
+                        "inverse-surface": "#fcf9f8",
+                        "secondary-dim": "#7e51ff",
+                        "surface-container-high": "#1f2020",
+                        "on-tertiary-fixed": "#001e4e",
+                        "surface-tint": "#81ecff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background: radial-gradient(circle at top right, #2b007a 0%, #0e0e0e 40%),
+                        radial-gradient(circle at bottom left, #004d57 0%, #0e0e0e 40%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(25, 26, 26, 0.7);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="font-body text-on-surface antialiased min-h-screen pb-12">
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#191a1a]/70 backdrop-blur-xl border-b border-white/5 shadow-[0_0_40px_rgba(205,189,255,0.06)]">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#81ecff] to-[#00d4ec] font-headline uppercase tracking-wide">
+                Локальный мост DeepSeek
+            </span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-white/60 hover:bg-white/5 transition-colors p-2 rounded-lg" data-icon="dark_mode">dark_mode</button>
+</div>
+</header>
+<aside class="fixed left-0 top-0 h-full hidden md:flex flex-col py-6 bg-[#0e0e0e] w-64 border-r border-white/5 z-40 pt-24">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-on-primary-fixed">
+<span class="material-symbols-outlined" data-icon="bridge">link</span>
+</div>
+<div>
+<h2 class="font-headline text-sm font-bold text-primary">DeepSeek Bridge</h2>
+<p class="text-xs text-white/40">Python ↔ Browser</p>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-1 px-4">
+<a class="flex items-center gap-3 bg-[#81ecff]/10 text-[#81ecff] rounded-lg px-4 py-3 font-headline text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Дашборд
+            </a>
+<a class="flex items-center gap-3 text-white/40 px-4 py-3 font-headline text-sm hover:text-white/80 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Настройки
+            </a>
+<a class="flex items-center gap-3 text-white/40 px-4 py-3 font-headline text-sm hover:text-white/80 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="code">code</span>
+                Селекторы
+            </a>
+<a class="flex items-center gap-3 text-white/40 px-4 py-3 font-headline text-sm hover:text-white/80 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+                Логи
+            </a>
+</nav>
+</aside>
+<main class="max-w-[720px] mx-auto pt-28 px-4 md:pl-72 md:max-w-[1000px]">
+<section class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<div class="flex items-center gap-4 mb-2">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="cable">cable</span>
+</div>
+<h1 class="text-2xl md:text-3xl font-headline font-extrabold text-on-surface tracking-tight">Локальный мост DeepSeek</h1>
+</div>
+<p class="text-on-surface-variant font-medium opacity-80 pl-16">Python ↔ браузер ↔ DeepSeek</p>
+</div>
+<div class="bg-surface-container-low p-1 rounded-xl flex items-center gap-1 border border-outline-variant/10 self-start md:self-end">
+<button class="px-3 py-1.5 rounded-lg text-xs font-label font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">Светлая</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-label font-medium bg-primary-container text-on-primary-container">Тёмная</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-label font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors">Системная</button>
+</div>
+</section>
+<div class="mb-8 inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-error-container/10 border border-error-container/20">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error-dim opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+</span>
+<span class="text-xs font-label font-bold text-error tracking-wide uppercase">Мост выключен</span>
+</div>
+<section class="mb-10 relative overflow-hidden glass-card rounded-[2rem] p-8 md:p-12 border border-white/5 group">
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[80px] rounded-full"></div>
+<div class="relative z-10">
+<h2 class="text-4xl md:text-5xl font-headline font-extrabold leading-tight tracking-tighter mb-4 bg-gradient-to-br from-white via-primary to-primary-dim bg-clip-text text-transparent">
+                    Мост к DeepSeek <br/>в один клик
+                </h2>
+<p class="text-on-surface-variant max-w-md text-lg leading-relaxed">
+                    Бесшовное соединение локальной среды разработки с мощью ИИ через защищенный туннель.
+                </p>
+</div>
+<div class="mt-8">
+<img alt="Neural connection visualization" class="absolute bottom-0 right-0 w-1/2 h-full object-cover opacity-20 mask-gradient" data-alt="abstract digital connection network with glowing cyan nodes and flowing data lines on deep black background cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHXc3VFpCa2aWJYLJr06J3vYpkpxrrt8EmNxXw-S5pNI085HAO_DJCB3039FCdteApbPMSAts8DybDDooKZGkEDktRTXGZo8EElUQhxZWuEkDOaFwkb5fOgyls9j6lD04AnaD8ygqlkKXVtjuVRiueDCtCGfxecj2NLFTJMEePJqzJcoJ1CSUD-fm6dU1PeEZ6P88JSjE-MHk9KWbnYZWsTtsUkP80O0wRJj0q28SZZgRjp7V_AB75S34B4JGg1HbwJty-jsx6RoU" style="mask-image: linear-gradient(to left, black, transparent);"/>
+</div>
+</section>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+<section class="glass-card rounded-[1.5rem] p-6 border border-white/5">
+<h3 class="text-xs font-label font-bold text-primary tracking-widest uppercase mb-6">Подключение</h3>
+<div class="space-y-4">
+<div class="flex flex-col md:flex-row gap-4">
+<div class="flex-1">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Адрес</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-body text-sm focus:ring-2 focus:ring-secondary-dim transition-all" type="text" value="127.0.0.1"/>
+</div>
+<div class="w-full md:w-32">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Порт</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-body text-sm focus:ring-2 focus:ring-secondary-dim transition-all" type="text" value="8765"/>
+</div>
+</div>
+<button class="w-full py-4 rounded-xl font-headline font-bold text-on-primary-fixed bg-gradient-to-br from-primary to-primary-dim hover:shadow-[0_0_20px_rgba(129,236,255,0.3)] transition-all active:scale-[0.98]">
+                        Соединить
+                    </button>
+</div>
+</section>
+</div>
+<section class="glass-card rounded-[1.5rem] p-8 border border-white/5">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xs font-label font-bold text-primary tracking-widest uppercase">Селекторы DeepSeek</h3>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-label font-bold text-on-surface-variant uppercase">Подсказки</span>
+<button class="w-10 h-5 bg-surface-container-highest rounded-full relative p-1 transition-all">
+<div class="w-3 h-3 bg-primary rounded-full translate-x-5"></div>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-10">
+<div class="space-y-1.5">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-wider pl-1">Input Area</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-mono text-xs focus:ring-2 focus:ring-primary/50 transition-all" placeholder="#chat-input" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-wider pl-1">Send Button</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-mono text-xs focus:ring-2 focus:ring-primary/50 transition-all" placeholder="[data-testid='send']" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-wider pl-1">Response Container</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-mono text-xs focus:ring-2 focus:ring-primary/50 transition-all" placeholder=".answer-block" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="block text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-wider pl-1">Stop Generating</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 text-on-surface font-mono text-xs focus:ring-2 focus:ring-primary/50 transition-all" placeholder=".stop-btn" type="text"/>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-4">
+<button class="flex-1 min-w-[120px] py-3 rounded-xl font-label font-bold text-xs bg-surface-bright/20 text-on-surface hover:bg-surface-bright/40 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="search">search</span>
+                    Проверить
+                </button>
+<button class="flex-1 min-w-[120px] py-3 rounded-xl font-label font-bold text-xs bg-primary text-on-primary-fixed hover:opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="save">save</span>
+                    Сохранить
+                </button>
+<button class="flex-1 min-w-[120px] py-3 rounded-xl font-label font-bold text-xs bg-transparent border border-error-dim/30 text-error-dim hover:bg-error-container/10 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="restart_alt">restart_alt</span>
+                    Сбросить
+                </button>
+</div>
+</section>
+<footer class="mt-12 text-center">
+<p class="text-[10px] font-label font-bold text-white/20 uppercase tracking-[0.2em]">Local DeepSeek Bridge • v1.4.2-stable</p>
+</footer>
+</main>
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-[#191a1a]/90 backdrop-blur-xl border-t border-white/5 flex justify-around items-center py-4 px-2 z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-[10px] font-label font-bold uppercase">Дашборд</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-white/40">
+<span class="material-symbols-outlined" data-icon="code">code</span>
+<span class="text-[10px] font-label font-bold uppercase">Селекторы</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-white/40">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-label font-bold uppercase">Настройки</span>
+</button>
+</nav>
+</body></html>

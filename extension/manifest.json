@@ -3,15 +3,14 @@
   "name": "Локальный мост DeepSeek",
   "version": "0.1.0",
   "description": "Открывает DeepSeek в браузере, отправляет запросы и возвращает ответы в локальный Python-клиент по WebSocket.",
-  "permissions": ["tabs", "scripting", "storage"],
+  "permissions": ["tabs", "windows", "scripting", "storage"],
   "host_permissions": ["https://chat.deepseek.com/*", "ws://127.0.0.1/*"],
   "background": {
     "service_worker": "src/background/background.js",
     "type": "module"
   },
   "action": {
-    "default_title": "Локальный мост DeepSeek",
-    "default_popup": "src/popup/popup.html"
+    "default_title": "Локальный мост DeepSeek — открыть панель"
   }
 }
 

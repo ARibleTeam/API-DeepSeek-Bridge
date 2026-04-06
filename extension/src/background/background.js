@@ -20,6 +20,7 @@ const BRIDGE_ENABLED_KEY = 'bridgeEnabled';
 const BRIDGE_WS_HOST_KEY = 'bridgeWsHost';
 const BRIDGE_WS_PORT_KEY = 'bridgeWsPort';
 const BRIDGE_SELECTORS_KEY = 'bridgeDeepseekSelectors';
+const BRIDGE_REUSE_TAB_ID_KEY = 'bridgeReuseDeepseekTabId';
 
 let pythonWs = null;
 let pythonWsConnecting = false;
@@ -33,10 +34,12 @@ let pythonWsHost = DEFAULT_PYTHON_WS_HOST;
 let pythonWsPort = DEFAULT_PYTHON_WS_PORT;
 let deepseekSelectors = { ...DEFAULT_DEEPSEEK_SELECTORS };
 
+let persistentDeepSeekTabId = null;
+
 const RECONNECT_INTERVAL_MS = 1000;
 const CONNECT_STUCK_TIMEOUT_MS = 5000;
 const CONNECT_TICK_MS = 1000;
-const MAX_PARALLEL_TASKS = 3;
+const MAX_PARALLEL_TASKS = 1;
 const LOG_PREFIX = '[DeepSeek][bridge]';
 
 function getWsStateLabel(ws) {
@@ -129,7 +132,7 @@ function rejectPendingTasksOnDisable() {
       requestId,
       ok: false,
       error: 'bridge_disabled',
-      message: 'Bridge disabled in extension popup'
+      message: 'Мост отключён в панели расширения'
     });
   }
 }
@@ -147,7 +150,8 @@ function getBridgeState() {
     deepseekSelectors,
     defaultDeepseekSelectors: DEFAULT_DEEPSEEK_SELECTORS,
     wsState: getWsStateLabel(pythonWs),
-    connecting: pythonWsConnecting
+    connecting: pythonWsConnecting,
+    reuseDeepseekTabId: persistentDeepSeekTabId
   };
 }
 
@@ -164,10 +168,11 @@ async function updateActionState() {
     if (state.wsState === 'OPEN') {
       badgeText = 'DS';
       badgeColor = '#15803d';
+      const reuseHint = state.reuseDeepseekTabId != null ? ' reuse-вкладка' : '';
       title =
         state.activeTaskCount > 0
           ? `DeepSeek Bridge: выполняет ${state.activeTaskCount}, очередь ${state.pendingTaskCount}`
-          : 'DeepSeek Bridge: готов (может открывать DeepSeek)';
+          : `DeepSeek Bridge: готов (может открывать DeepSeek)${reuseHint}`;
     }
   }
 
@@ -203,6 +208,8 @@ async function setBridgeEnabled(nextEnabled, connection = null) {
   } else {
     rejectPendingTasksOnDisable();
     disconnectPythonWs();
+    // eslint-disable-next-line no-void
+    void closePersistentReuseTab();
   }
 
   await updateActionState();
@@ -242,7 +249,28 @@ async function initBridgeEnabledState() {
   }
 
   if (bridgeEnabled) connectPythonWs();
+  await restoreReuseTabFromStorage();
   await updateActionState();
+}
+
+async function restoreReuseTabFromStorage() {
+  if (persistentDeepSeekTabId != null) return;
+  try {
+    const saved = await chrome.storage.local.get(BRIDGE_REUSE_TAB_ID_KEY);
+    const id = saved?.[BRIDGE_REUSE_TAB_ID_KEY];
+    if (typeof id !== 'number') return;
+    await chrome.tabs.get(id);
+    persistentDeepSeekTabId = id;
+    console.debug(`${LOG_PREFIX} восстановлена reuse-вкладка из storage`, { tabId: id });
+  } catch {
+    persistentDeepSeekTabId = null;
+    await chrome.storage.local.remove(BRIDGE_REUSE_TAB_ID_KEY);
+  }
+}
+
+async function persistReuseTabId(tabId) {
+  persistentDeepSeekTabId = tabId;
+  await chrome.storage.local.set({ [BRIDGE_REUSE_TAB_ID_KEY]: tabId });
 }
 
 function extractTaskText(payload) {
@@ -291,6 +319,33 @@ function enqueueTask(taskMsg) {
   void updateActionState();
 }
 
+async function getPersistentTabIfValid() {
+  if (persistentDeepSeekTabId == null) {
+    await restoreReuseTabFromStorage();
+  }
+  if (persistentDeepSeekTabId == null) return null;
+  try {
+    await chrome.tabs.get(persistentDeepSeekTabId);
+    return persistentDeepSeekTabId;
+  } catch {
+    persistentDeepSeekTabId = null;
+    await chrome.storage.local.remove(BRIDGE_REUSE_TAB_ID_KEY);
+    return null;
+  }
+}
+
+async function closePersistentReuseTab() {
+  if (persistentDeepSeekTabId == null) return;
+  const id = persistentDeepSeekTabId;
+  persistentDeepSeekTabId = null;
+  try {
+    await chrome.storage.local.remove(BRIDGE_REUSE_TAB_ID_KEY);
+  } catch {
+    // ignore
+  }
+  await closeTab(id);
+}
+
 async function executeDeepSeekTask(taskMsg) {
   const requestId = taskMsg?.requestId;
   const payload = taskMsg?.payload;
@@ -304,7 +359,7 @@ async function executeDeepSeekTask(taskMsg) {
       requestId,
       ok: false,
       error: 'bridge_disabled',
-      message: 'Bridge disabled in extension popup'
+      message: 'Мост отключён в панели расширения'
     });
     return;
   }
@@ -325,6 +380,8 @@ async function executeDeepSeekTask(taskMsg) {
   const timeoutMs =
     payload && typeof payload.timeoutMs === 'number' && payload.timeoutMs > 0 ? payload.timeoutMs : 60_000;
 
+  const reuseDeepseekTab = Boolean(payload?.reuseDeepseekTab);
+
   activeTaskCount += 1;
   // eslint-disable-next-line no-void
   void updateActionState();
@@ -333,25 +390,53 @@ async function executeDeepSeekTask(taskMsg) {
     timeoutMs,
     taskLength: taskText.length,
     activeTaskCount,
-    maxParallel: MAX_PARALLEL_TASKS
+    maxParallel: MAX_PARALLEL_TASKS,
+    reuseDeepseekTab
   });
   let tabId = null;
   try {
-    tabId = (await createDeepSeekTab()).id;
-    console.debug(`${LOG_PREFIX} вкладка создана`, { requestId, tabId });
-    await activateDeepSeekTab(tabId);
-    console.debug(`${LOG_PREFIX} вкладка активирована`, { requestId, tabId });
-    await waitForTabReady(tabId, 15_000);
-    console.debug(`${LOG_PREFIX} вкладка готова`, { requestId, tabId });
-    await activateDeepSeekTab(tabId);
-    console.debug(`${LOG_PREFIX} вкладка активирована повторно`, { requestId, tabId });
+    let baseCount = 0;
 
-    await ensureNewChat(tabId, deepseekSelectors);
-    console.debug(`${LOG_PREFIX} новый чат подготовлен`, { requestId, tabId });
-    await clearDeepSeekMessages(tabId, deepseekSelectors);
-    console.debug(`${LOG_PREFIX} видимые сообщения очищены`, { requestId, tabId });
-    const baseCount = await getDeepSeekMessageCount(tabId, deepseekSelectors);
-    console.debug(`${LOG_PREFIX} зафиксирована базовая длина чата`, { requestId, baseCount });
+    if (reuseDeepseekTab) {
+      const existingTab = await getPersistentTabIfValid();
+      if (existingTab != null) {
+        tabId = existingTab;
+        console.debug(`${LOG_PREFIX} повторное использование вкладки`, { requestId, tabId });
+        await activateDeepSeekTab(tabId);
+        await waitForTabReady(tabId, 15_000);
+        await activateDeepSeekTab(tabId);
+        baseCount = await getDeepSeekMessageCount(tabId, deepseekSelectors);
+        console.debug(`${LOG_PREFIX} базовая длина чата (тот же диалог)`, { requestId, baseCount });
+      } else {
+        tabId = (await createDeepSeekTab()).id;
+        await persistReuseTabId(tabId);
+        console.debug(`${LOG_PREFIX} вкладка создана (режим reuse)`, { requestId, tabId });
+        await activateDeepSeekTab(tabId);
+        await waitForTabReady(tabId, 15_000);
+        await activateDeepSeekTab(tabId);
+        await ensureNewChat(tabId, deepseekSelectors);
+        console.debug(`${LOG_PREFIX} новый чат подготовлен`, { requestId, tabId });
+        await clearDeepSeekMessages(tabId, deepseekSelectors);
+        console.debug(`${LOG_PREFIX} видимые сообщения очищены`, { requestId, tabId });
+        baseCount = await getDeepSeekMessageCount(tabId, deepseekSelectors);
+        console.debug(`${LOG_PREFIX} зафиксирована базовая длина чата`, { requestId, baseCount });
+      }
+    } else {
+      if (persistentDeepSeekTabId != null) {
+        await closePersistentReuseTab();
+      }
+      tabId = (await createDeepSeekTab()).id;
+      console.debug(`${LOG_PREFIX} вкладка создана`, { requestId, tabId });
+      await activateDeepSeekTab(tabId);
+      await waitForTabReady(tabId, 15_000);
+      await activateDeepSeekTab(tabId);
+      await ensureNewChat(tabId, deepseekSelectors);
+      console.debug(`${LOG_PREFIX} новый чат подготовлен`, { requestId, tabId });
+      await clearDeepSeekMessages(tabId, deepseekSelectors);
+      console.debug(`${LOG_PREFIX} видимые сообщения очищены`, { requestId, tabId });
+      baseCount = await getDeepSeekMessageCount(tabId, deepseekSelectors);
+      console.debug(`${LOG_PREFIX} зафиксирована базовая длина чата`, { requestId, baseCount });
+    }
 
     const prompt = buildDirectAnswerPrompt(taskText);
     console.debug(`${LOG_PREFIX} промпт подготовлен`, { requestId, promptLength: prompt.length });
@@ -404,9 +489,11 @@ async function executeDeepSeekTask(taskMsg) {
     });
   } finally {
     activeTaskCount = Math.max(0, activeTaskCount - 1);
-    if (tabId != null) {
+    if (!reuseDeepseekTab && tabId != null) {
       console.debug(`${LOG_PREFIX} очистка: закрытие вкладки`, { requestId, tabId });
       await closeTab(tabId);
+    } else if (reuseDeepseekTab) {
+      console.debug(`${LOG_PREFIX} вкладка оставлена открытой (reuse)`, { requestId, tabId });
     }
     console.debug(`${LOG_PREFIX} задача завершена`, { requestId, activeTaskCount });
     processPendingTasks();
@@ -447,7 +534,6 @@ function connectPythonWs() {
       console.debug('[DeepSeek][ws] подключено');
       // eslint-disable-next-line no-void
       void updateActionState();
-      // Небольшое приветствие (python может игнорировать).
       postPython({ type: 'hello', client: 'extension', version: '0.1.0', url: DEEPSEEK_URL });
     };
 
@@ -456,8 +542,6 @@ function connectPythonWs() {
       pythonWsConnecting = false;
       // eslint-disable-next-line no-void
       void updateActionState();
-      // Когда python не запущен, будет ERR_CONNECTION_REFUSED — это ожидаемо.
-      // Не спамим консолью: логируем максимум раз в 30 секунд.
       const now = Date.now();
       if (now - lastRefusedLogAt > 30_000) {
         lastRefusedLogAt = now;
@@ -477,7 +561,6 @@ function connectPythonWs() {
       pythonWs = null;
       // eslint-disable-next-line no-void
       void updateActionState();
-      // Всегда пробуем переподключаться раз в 1 секунду.
       scheduleReconnect();
     };
 
@@ -487,6 +570,32 @@ function connectPythonWs() {
         msg = JSON.parse(event.data);
       } catch {
         // ignore
+      }
+
+      if (msg?.type === 'deepseek_close_reuse_tab') {
+        const requestId = msg.requestId;
+        if (typeof requestId !== 'string' || !requestId) return;
+        console.debug(`${LOG_PREFIX} запрос закрытия reuse-вкладки из Python`, { requestId });
+        void (async () => {
+          try {
+            await closePersistentReuseTab();
+            postPython({
+              type: 'deepseek_close_reuse_tab_result',
+              requestId,
+              ok: true
+            });
+          } catch (e) {
+            const message = e && e.message ? String(e.message) : String(e);
+            postPython({
+              type: 'deepseek_close_reuse_tab_result',
+              requestId,
+              ok: false,
+              error: 'close_failed',
+              message
+            });
+          }
+        })();
+        return;
       }
 
       if (!msg || msg.type !== 'deepseek_task') return;
@@ -509,10 +618,33 @@ setInterval(() => {
   }
 }, CONNECT_TICK_MS);
 
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (persistentDeepSeekTabId == null || tabId !== persistentDeepSeekTabId) return;
+  persistentDeepSeekTabId = null;
+  console.debug(`${LOG_PREFIX} reuse-вкладка закрыта пользователем`, { tabId });
+  // eslint-disable-next-line no-void
+  void chrome.storage.local.remove(BRIDGE_REUSE_TAB_ID_KEY);
+  // eslint-disable-next-line no-void
+  void updateActionState();
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'bridge_get_state') {
     sendResponse(getBridgeState());
     return;
+  }
+
+  if (message?.type === 'bridge_close_reuse_tab') {
+    void closePersistentReuseTab()
+      .then(() => sendResponse({ ok: true, state: getBridgeState() }))
+      .catch((e) =>
+        sendResponse({
+          ok: false,
+          error: e?.message || 'Не удалось закрыть вкладку',
+          state: getBridgeState()
+        })
+      );
+    return true;
   }
 
   if (message?.type === 'bridge_set_enabled') {
@@ -670,4 +802,23 @@ chrome.runtime.onStartup?.addListener(() => {
 });
 // eslint-disable-next-line no-void
 void initBridgeEnabledState();
+
+const DASHBOARD_URL = chrome.runtime.getURL('src/dashboard/dashboard.html');
+
+chrome.action.onClicked.addListener(async () => {
+  try {
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find((t) => t.url === DASHBOARD_URL);
+    if (existing?.id != null) {
+      await chrome.tabs.update(existing.id, { active: true });
+      if (existing.windowId != null) {
+        await chrome.windows.update(existing.windowId, { focused: true });
+      }
+      return;
+    }
+    await chrome.tabs.create({ url: DASHBOARD_URL });
+  } catch {
+    // ignore
+  }
+});
 

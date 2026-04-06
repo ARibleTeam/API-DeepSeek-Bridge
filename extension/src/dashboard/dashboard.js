@@ -1,6 +1,6 @@
+const THEME_STORAGE_KEY = 'dashboardUiTheme';
+
 const toggleBtn = document.getElementById('toggleBtn');
-const selectorsToggleBtn = document.getElementById('selectorsToggleBtn');
-const selectorsSection = document.getElementById('selectorsSection');
 const hostInput = document.getElementById('hostInput');
 const portInput = document.getElementById('portInput');
 const errorText = document.getElementById('errorText');
@@ -12,13 +12,85 @@ const sourceCiteSelectorInput = document.getElementById('sourceCiteSelectorInput
 const testSelectorsBtn = document.getElementById('testSelectorsBtn');
 const saveSelectorsBtn = document.getElementById('saveSelectorsBtn');
 const resetSelectorsBtn = document.getElementById('resetSelectorsBtn');
-let selectorsVisible = false;
+const bridgeStatus = document.getElementById('bridgeStatus');
+const statusLabel = document.getElementById('statusLabel');
 
-function renderSelectorsVisibility() {
-  selectorsSection.classList.toggle('collapsed', !selectorsVisible);
-  selectorsToggleBtn.textContent = selectorsVisible
-    ? 'Скрыть настройки селекторов'
-    : 'Показать настройки селекторов';
+function resolveTheme(preference) {
+  if (preference === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return preference === 'dark' ? 'dark' : 'light';
+}
+
+function updateThemeButtons(preference) {
+  document.querySelectorAll('.theme-switch__btn').forEach((btn) => {
+    const v = btn.getAttribute('data-theme-value');
+    btn.classList.toggle('is-active', v === preference);
+  });
+}
+
+function applyThemePreference(preference, { persist } = { persist: false }) {
+  document.documentElement.setAttribute('data-theme-preference', preference);
+  document.documentElement.setAttribute('data-theme', resolveTheme(preference));
+  updateThemeButtons(preference);
+  if (persist) {
+    chrome.storage.local.set({ [THEME_STORAGE_KEY]: preference });
+  }
+}
+
+async function initTheme() {
+  const stored = await chrome.storage.local.get(THEME_STORAGE_KEY);
+  const raw = stored?.[THEME_STORAGE_KEY];
+  const preference =
+    raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system';
+  applyThemePreference(preference, { persist: false });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const pref = document.documentElement.getAttribute('data-theme-preference') || 'system';
+    if (pref === 'system') {
+      document.documentElement.setAttribute('data-theme', resolveTheme('system'));
+    }
+  });
+
+  document.querySelectorAll('.theme-switch__btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const v = btn.getAttribute('data-theme-value');
+      if (v === 'light' || v === 'dark' || v === 'system') {
+        applyThemePreference(v, { persist: true });
+      }
+    });
+  });
+}
+
+function setBridgeStatus(state) {
+  if (!bridgeStatus || !statusLabel) return;
+
+  bridgeStatus.classList.remove('status-pill--off', 'status-pill--ok', 'status-pill--wait', 'status-pill--busy');
+
+  const enabled = Boolean(state?.enabled);
+  const wsState = typeof state?.wsState === 'string' ? state.wsState : '';
+  const connecting = Boolean(state?.connecting);
+
+  if (!enabled) {
+    bridgeStatus.classList.add('status-pill--off');
+    statusLabel.textContent = 'Мост выключен';
+    return;
+  }
+
+  if (connecting || wsState === 'CONNECTING') {
+    bridgeStatus.classList.add('status-pill--busy');
+    statusLabel.textContent = 'Подключение к Python…';
+    return;
+  }
+
+  if (wsState === 'OPEN') {
+    bridgeStatus.classList.add('status-pill--ok');
+    statusLabel.textContent = 'Связь с Python установлена';
+    return;
+  }
+
+  bridgeStatus.classList.add('status-pill--wait');
+  statusLabel.textContent = 'Ожидание сервера Python…';
 }
 
 function render(state) {
@@ -42,16 +114,18 @@ function render(state) {
   resetSelectorsBtn.disabled = !canEditSelectors;
   testSelectorsBtn.disabled = !canEditSelectors;
 
+  const labelEl = toggleBtn.querySelector('.cta__label');
   if (enabled) {
-    toggleBtn.textContent = 'Отключить';
+    if (labelEl) labelEl.textContent = 'Отключить';
     toggleBtn.classList.remove('connect');
     toggleBtn.classList.add('disconnect');
-    return;
+  } else {
+    if (labelEl) labelEl.textContent = 'Соединить';
+    toggleBtn.classList.remove('disconnect');
+    toggleBtn.classList.add('connect');
   }
 
-  toggleBtn.textContent = 'Соединить';
-  toggleBtn.classList.remove('disconnect');
-  toggleBtn.classList.add('connect');
+  setBridgeStatus(state);
 }
 
 function requestState() {
@@ -85,7 +159,9 @@ function normalizePort(port) {
 toggleBtn.addEventListener('click', () => {
   errorText.textContent = '';
   selectorTestText.textContent = '';
-  const shouldEnable = toggleBtn.textContent.trim().toLowerCase() === 'соединить';
+  const labelEl = toggleBtn.querySelector('.cta__label');
+  const label = labelEl ? labelEl.textContent.trim().toLowerCase() : '';
+  const shouldEnable = label === 'соединить';
   const host = normalizeHost(hostInput.value);
   const port = normalizePort(portInput.value);
   if (shouldEnable && (!host || !port)) {
@@ -153,11 +229,7 @@ resetSelectorsBtn.addEventListener('click', () => {
   });
 });
 
-requestState();
-
-selectorsToggleBtn.addEventListener('click', () => {
-  selectorsVisible = !selectorsVisible;
-  renderSelectorsVisibility();
+void initTheme().then(() => {
+  requestState();
 });
-
-renderSelectorsVisibility();
+window.addEventListener('focus', requestState);

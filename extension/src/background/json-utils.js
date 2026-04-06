@@ -44,12 +44,10 @@ export function extractResultFromDeepSeekJson(parsedJson) {
     return parsedJson.result.trim();
   }
 
-  // DARA-style "final": { command: 'final', args: { result: '...' } }
   if (parsedJson.command === 'final' && parsedJson.args && typeof parsedJson.args.result === 'string') {
     return parsedJson.args.result.trim();
   }
 
-  // Sometimes result can be nested differently.
   if (parsedJson.args && typeof parsedJson.args.result === 'string') {
     return parsedJson.args.result.trim();
   }

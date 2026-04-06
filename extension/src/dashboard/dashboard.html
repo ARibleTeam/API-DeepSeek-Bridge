@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru" data-theme-preference="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Локальный мост DeepSeek</title>
+    <link rel="stylesheet" href="./dashboard.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true">
+      <div class="ambient__blob ambient__blob--a"></div>
+      <div class="ambient__blob ambient__blob--b"></div>
+      <div class="ambient__blob ambient__blob--c"></div>
+      <div class="ambient__grid"></div>
+      <div class="ambient__noise"></div>
+    </div>
+
+    <div class="page">
+      <header class="top">
+        <div class="brand">
+          <div class="brand__text">
+            <div class="brand__title">Локальный мост DeepSeek</div>
+            <div class="brand__tagline">Python ↔ браузер ↔ DeepSeek</div>
+          </div>
+        </div>
+
+        <div class="top__actions">
+          <div id="bridgeStatus" class="status-pill" role="status" aria-live="polite">
+            <span class="status-pill__dot" id="statusDot"></span>
+            <span class="status-pill__label" id="statusLabel">Загрузка…</span>
+          </div>
+
+          <div class="theme-switch" role="group" aria-label="Тема оформления">
+            <button type="button" class="theme-switch__btn" data-theme-value="light" title="Светлая тема">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+              </svg>
+            </button>
+            <button type="button" class="theme-switch__btn" data-theme-value="dark" title="Тёмная тема">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </button>
+            <button type="button" class="theme-switch__btn" data-theme-value="system" title="Как в системе">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="glass panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Подключение</h2>
+            <p class="panel__hint">Хост и порт должны совпадать с настройками сервера в Python.</p>
+          </div>
+          <div class="row-fields">
+            <label class="field">
+              <span class="label">Адрес</span>
+              <input id="hostInput" type="text" value="127.0.0.1" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="label">Порт</span>
+              <input id="portInput" type="number" min="1" max="65535" value="8765" />
+            </label>
+          </div>
+          <button id="toggleBtn" type="button" class="cta connect">
+            <span class="cta__shine" aria-hidden="true"></span>
+            <span class="cta__label">Соединить</span>
+          </button>
+        </section>
+
+        <section class="glass panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Селекторы DeepSeek</h2>
+            <p class="panel__hint">CSS-селекторы элементов на странице чата (обновляй, если поменялась вёрстка).</p>
+          </div>
+          <label class="field">
+            <span class="label">Поле ввода</span>
+            <input id="inputSelectorInput" type="text" placeholder="textarea[placeholder*='DeepSeek']" />
+          </label>
+          <label class="field">
+            <span class="label">Кнопка отправки</span>
+            <input id="sendButtonSelectorInput" type="text" placeholder="div[role='button'][aria-disabled='false']" />
+          </label>
+          <label class="field">
+            <span class="label">Блок ответа</span>
+            <input id="messageBlockSelectorInput" type="text" placeholder=".ds-markdown" />
+          </label>
+          <label class="field">
+            <span class="label">Цитаты / источники</span>
+            <input id="sourceCiteSelectorInput" type="text" placeholder=".ds-markdown-cite" />
+          </label>
+
+          <details class="help-details">
+            <summary>Подсказка: как получить селектор</summary>
+            <div class="help-box">
+              <div>Вставляй CSS-селектор элемента, а не весь HTML.</div>
+              <div>1) DevTools → Elements → выбери элемент.</div>
+              <div>2) Copy → Copy selector и вставь сюда.</div>
+              <div>Если есть только outerHTML, найди стабильный class/атрибут и собери селектор вручную.</div>
+            </div>
+          </details>
+
+          <div class="row-btns">
+            <button id="testSelectorsBtn" type="button" class="btn-secondary">Проверить</button>
+            <button id="saveSelectorsBtn" type="button" class="btn-secondary">Сохранить</button>
+            <button id="resetSelectorsBtn" type="button" class="btn-secondary">Сбросить</button>
+          </div>
+        </section>
+
+        <div id="selectorTestText" class="hint-text"></div>
+        <div id="errorText" class="error-text"></div>
+      </main>
+
+      <footer class="foot">
+        <span>Локальный мост · WebSocket</span>
+      </footer>
+    </div>
+    <script type="module" src="./dashboard.js"></script>
+  </body>
+</html>

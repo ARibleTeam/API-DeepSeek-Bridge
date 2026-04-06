@@ -29,15 +29,6 @@ def _extract_result_from_json(parsed_json: Any) -> Optional[str]:
 
 
 class DeepSeekBridge:
-    """
-    Minimal client for local DeepSeek bridge controlled by a browser extension.
-
-    Protocol (WebSocket):
-    - extension connects to ws://127.0.0.1:<port>
-    - python sends: {type:'deepseek_task', requestId, payload:{task}, timeoutMs}
-    - extension responds: {type:'deepseek_task_result', requestId, ok, result?, parsedJson?, error?, message?}
-    """
-
     def __init__(
         self,
         *,
@@ -45,11 +36,13 @@ class DeepSeekBridge:
         ws_port: int = 8765,
         request_timeout_seconds: float = 180.0,
         connect_timeout_seconds: float = 60.0,
+        reuse_deepseek_tab: bool = False,
     ):
         self.ws_host = ws_host
         self.ws_port = ws_port
         self.request_timeout_seconds = request_timeout_seconds
         self.connect_timeout_seconds = connect_timeout_seconds
+        self.reuse_deepseek_tab = reuse_deepseek_tab
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
         self._server_started = threading.Event()
@@ -94,7 +87,7 @@ class DeepSeekBridge:
                     if msg.get("type") == "hello":
                         continue
 
-                    if msg.get("type") != "deepseek_task_result":
+                    if msg.get("type") not in ("deepseek_task_result", "deepseek_close_reuse_tab_result"):
                         continue
 
                     request_id = msg.get("requestId")
@@ -128,6 +121,17 @@ class DeepSeekBridge:
                     "payload": payload,
                     "timeoutMs": timeout_ms,
                 },
+                ensure_ascii=False,
+            )
+        )
+
+    async def _send_close_reuse_tab(self, request_id: str) -> None:
+        ws = self._active_ws
+        if ws is None:
+            raise RuntimeError("Extension is not connected")
+        await ws.send(
+            json.dumps(
+                {"type": "deepseek_close_reuse_tab", "requestId": request_id},
                 ensure_ascii=False,
             )
         )
@@ -175,17 +179,65 @@ class DeepSeekBridge:
             raise RuntimeError("Invalid response from extension")
         return response
 
+    def _close_reuse_tab_sync(self, timeout_seconds: float) -> Dict[str, Any]:
+        if not self.reuse_deepseek_tab:
+            raise ValueError("close_reuse_tab() is only available when reuse_deepseek_tab=True")
+
+        self._start_background_server()
+        request_id = f"req-{uuid.uuid4()}"
+
+        if not self._extension_connected.wait(timeout=self.connect_timeout_seconds):
+            raise TimeoutError(
+                f"Extension did not connect to ws://{self.ws_host}:{self.ws_port} within {self.connect_timeout_seconds}s"
+            )
+
+        loop = self._loop
+        if loop is None:
+            raise RuntimeError("Bridge event loop is not running")
+
+        result_future: concurrent.futures.Future = concurrent.futures.Future()
+        with self._state_lock:
+            self._pending_results[request_id] = result_future
+
+        try:
+            send_future = asyncio.run_coroutine_threadsafe(
+                self._send_close_reuse_tab(request_id),
+                loop,
+            )
+            send_future.result(timeout=3)
+        except Exception as e:
+            with self._state_lock:
+                self._pending_results.pop(request_id, None)
+            raise RuntimeError(f"Failed to send close_reuse_tab to extension: {e}") from e
+
+        try:
+            response = result_future.result(timeout=timeout_seconds + 2)
+        except concurrent.futures.TimeoutError as e:
+            with self._state_lock:
+                self._pending_results.pop(request_id, None)
+            raise TimeoutError("Extension did not close reuse tab in time") from e
+
+        if not isinstance(response, dict):
+            raise RuntimeError("Invalid response from extension")
+        return response
+
+    def _task_payload(self, prompt: str, timeout_ms: int) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"task": prompt.strip(), "timeoutMs": timeout_ms}
+        if self.reuse_deepseek_tab:
+            payload["reuseDeepseekTab"] = True
+        return payload
+
     def ask_raw(self, prompt: str, timeout_seconds: Optional[float] = None) -> Dict[str, Any]:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt must be a non-empty string")
         timeout_ms = int((timeout_seconds or self.request_timeout_seconds) * 1000)
-        return self._request_sync(payload={"task": prompt.strip(), "timeoutMs": timeout_ms}, timeout_ms=timeout_ms)
+        return self._request_sync(self._task_payload(prompt.strip(), timeout_ms), timeout_ms=timeout_ms)
 
     async def aask_raw(self, prompt: str, timeout_seconds: Optional[float] = None) -> Dict[str, Any]:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt must be a non-empty string")
         timeout_ms = int((timeout_seconds or self.request_timeout_seconds) * 1000)
-        return await self._request_async(payload={"task": prompt.strip(), "timeoutMs": timeout_ms}, timeout_ms=timeout_ms)
+        return await self._request_async(self._task_payload(prompt.strip(), timeout_ms), timeout_ms=timeout_ms)
 
     def ask(self, prompt: str, timeout_seconds: Optional[float] = None) -> str:
         result = self.ask_raw(prompt=prompt, timeout_seconds=timeout_seconds)
@@ -202,3 +254,11 @@ class DeepSeekBridge:
         parsed_json = result.get("parsedJson")
         extracted = result.get("result") or _extract_result_from_json(parsed_json) or ""
         return extracted
+
+    def close_reuse_tab(self, timeout_seconds: float = 15.0) -> None:
+        result = self._close_reuse_tab_sync(timeout_seconds=timeout_seconds)
+        if not isinstance(result, dict) or not result.get("ok"):
+            raise RuntimeError(result.get("message") or result.get("error") or "close_reuse_tab failed")
+
+    async def aclose_reuse_tab(self, timeout_seconds: float = 15.0) -> None:
+        await asyncio.to_thread(self.close_reuse_tab, timeout_seconds)
