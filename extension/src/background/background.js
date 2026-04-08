@@ -29,6 +29,8 @@ const pendingTasks = [];
 let lastRefusedLogAt = 0;
 let reconnectTimerId = null;
 let connectWatchdogTimerId = null;
+let heartbeatTimerId = null;
+let lastPongAt = 0;
 let bridgeEnabled = false;
 let pythonWsHost = DEFAULT_PYTHON_WS_HOST;
 let pythonWsPort = DEFAULT_PYTHON_WS_PORT;
@@ -39,6 +41,8 @@ let persistentDeepSeekTabId = null;
 const RECONNECT_INTERVAL_MS = 1000;
 const CONNECT_STUCK_TIMEOUT_MS = 5000;
 const CONNECT_TICK_MS = 1000;
+const HEARTBEAT_INTERVAL_MS = 3000;
+const HEARTBEAT_TIMEOUT_MS = 9000;
 const MAX_PARALLEL_TASKS = 1;
 const LOG_PREFIX = '[DeepSeek][bridge]';
 
@@ -99,6 +103,36 @@ function clearConnectWatchdog() {
   }
 }
 
+function clearHeartbeat() {
+  if (heartbeatTimerId) {
+    clearInterval(heartbeatTimerId);
+    heartbeatTimerId = null;
+  }
+  lastPongAt = 0;
+}
+
+function startHeartbeat(ws) {
+  clearHeartbeat();
+  lastPongAt = Date.now();
+  heartbeatTimerId = setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const now = Date.now();
+    if (lastPongAt > 0 && now - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
+      try {
+        ws.close();
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    try {
+      ws.send(JSON.stringify({ type: 'ping', ts: now }));
+    } catch {
+      // ignore
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
 function scheduleReconnect() {
   if (!bridgeEnabled) return;
   clearReconnectTimer();
@@ -111,6 +145,7 @@ function scheduleReconnect() {
 function disconnectPythonWs() {
   clearReconnectTimer();
   clearConnectWatchdog();
+  clearHeartbeat();
   pythonWsConnecting = false;
   if (pythonWs) {
     try {
@@ -531,6 +566,7 @@ function connectPythonWs() {
     ws.onopen = () => {
       clearConnectWatchdog();
       pythonWsConnecting = false;
+      startHeartbeat(ws);
       console.debug('[DeepSeek][ws] подключено');
       // eslint-disable-next-line no-void
       void updateActionState();
@@ -539,6 +575,7 @@ function connectPythonWs() {
 
     ws.onerror = () => {
       clearConnectWatchdog();
+      clearHeartbeat();
       pythonWsConnecting = false;
       // eslint-disable-next-line no-void
       void updateActionState();
@@ -556,6 +593,7 @@ function connectPythonWs() {
 
     ws.onclose = () => {
       clearConnectWatchdog();
+      clearHeartbeat();
       pythonWsConnecting = false;
       console.debug('[DeepSeek][ws] соединение закрыто, переподключение через 1 сек');
       pythonWs = null;
@@ -595,6 +633,11 @@ function connectPythonWs() {
             });
           }
         })();
+        return;
+      }
+
+      if (msg?.type === 'pong') {
+        lastPongAt = Date.now();
         return;
       }
 

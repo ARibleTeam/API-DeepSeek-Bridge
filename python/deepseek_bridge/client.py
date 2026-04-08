@@ -86,6 +86,17 @@ class DeepSeekBridge:
 
                     if msg.get("type") == "hello":
                         continue
+                    if msg.get("type") == "ping":
+                        try:
+                            await ws.send(
+                                json.dumps(
+                                    {"type": "pong", "ts": msg.get("ts")},
+                                    ensure_ascii=False,
+                                )
+                            )
+                        except Exception:
+                            pass
+                        continue
 
                     if msg.get("type") not in ("deepseek_task_result", "deepseek_close_reuse_tab_result"):
                         continue
